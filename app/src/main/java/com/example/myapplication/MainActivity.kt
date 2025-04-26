@@ -501,7 +501,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun importData() {
         try {
-            val files = filesDir.listFiles { _, name ->
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val files = downloadsDir.listFiles { _, name ->
                 name.startsWith("finance_backup_") && name.endsWith(".json")
             }?.sortedByDescending { it.lastModified() }
 
@@ -531,6 +532,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Restore failed: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
+
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

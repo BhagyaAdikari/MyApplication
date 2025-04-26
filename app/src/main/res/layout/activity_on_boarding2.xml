@@ -92,7 +92,7 @@
         android:id="@+id/btn_next"
         android:layout_width="0dp"
         android:layout_height="56dp"
-        android:text="Next"
+        android:text="@string/next"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"

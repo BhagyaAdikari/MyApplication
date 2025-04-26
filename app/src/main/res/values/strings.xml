@@ -37,5 +37,6 @@
     <string name="app_name">WealthWise</string>
     <string name="tagline">Smarter Money Moves</string>
     <string name="app_logo">WealthWise Logo</string>
+    <string name="next">Next</string>
 
 </resources>
