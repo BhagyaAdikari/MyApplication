@@ -1,0 +1,41 @@
+<resources>
+
+
+    <string-array name="categories">
+        <item>Food</item>
+        <item>Transport</item>
+        <item>Bills</item>
+        <item>Entertainment</item>
+        <item>Shopping</item>
+        <item>Other</item>
+        <item>Income</item>
+    </string-array>
+
+    <string-array name="currencies">
+        <item>$ US Dollar</item>
+        <item>€ Euro</item>
+        <item>£ British Pound</item>
+        <item>¥ Japanese Yen</item>
+        <item>₹ Indian Rupee</item>
+    </string-array>
+
+    <string name="notification_channel_name">Budget Alerts</string>
+    <string name="notification_channel_desc">Notifications for budget warnings</string>
+    <string name="currency_prompt">Select Currency</string>
+    <string name="backup_restore_title">Backup and Restore</string>
+    <string name="backup_message">Backup your data to a file?</string>
+    <string name="restore_message">Restore your data from a file?</string>
+    <string name="des">Finance Clarity at Your Fingertips</string>
+
+    <string-array name="currency_array">
+        <item>USD ($)</item>
+        <item>EUR (€)</item>
+        <item>GBP (£)</item>
+        <item>LKR (Rs)</item>
+    </string-array>
+
+    <string name="app_name">WealthWise</string>
+    <string name="tagline">Smarter Money Moves</string>
+    <string name="app_logo">WealthWise Logo</string>
+
+</resources>
