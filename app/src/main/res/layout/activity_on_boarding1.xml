@@ -5,22 +5,24 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/onboarding_background"
-    android:padding="24dp">
+    android:background="@drawable/gradient_background"
+    android:padding="24dp"
+    tools:context=".OnBoarding1Activity">
 
     <!-- Animated Image -->
     <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/onboard_image"
+        android:id="@+id/animationView"
         android:layout_width="300dp"
         android:layout_height="300dp"
         android:layout_marginTop="40dp"
-        app:lottie_rawRes="@raw/p_money"
+        app:lottie_rawRes="@raw/budget"
         app:lottie_autoPlay="true"
         app:lottie_loop="true"
-        app:lottie_speed="0.8"
+        app:lottie_speed="1.0"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_chainStyle="packed"/>
 
     <!-- Title with Typography -->
     <TextView
@@ -35,7 +37,7 @@
         android:letterSpacing="0.03"
         android:layout_marginTop="32dp"
         android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/onboard_image"
+        app:layout_constraintTop_toBottomOf="@id/animationView"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 

@@ -15,15 +15,34 @@
         android:padding="16dp">
 
         <!-- Header Section -->
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Expense Tracker"
-            android:textSize="24sp"
-            android:textColor="@color/primary_purple_dark"
-            android:textStyle="bold"
-            android:letterSpacing="0.03"
-            android:layout_marginBottom="16dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Expense Tracker"
+                android:textSize="24sp"
+                android:textColor="@color/primary_purple_dark"
+                android:textStyle="bold"
+                android:letterSpacing="0.03"/>
+
+            <ImageView
+                android:id="@+id/btnReminder"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/bell"
+                android:padding="4dp"
+                app:tint="@color/primary_purple"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"/>
+        </LinearLayout>
 
         <!-- Quick Actions Row -->
         <LinearLayout
@@ -138,12 +157,16 @@
                     android:background="@color/black"/>
 
                 <TextView
+                    android:id="@+id/tvViewFullReport"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="View Full Report →"
                     android:textSize="14sp"
                     android:textColor="@color/primary_purple"
-                    android:textAlignment="textEnd"/>
+                    android:textAlignment="textEnd"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -229,10 +252,12 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Transactions Card -->
+        <!-- Categories Section -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
             app:cardCornerRadius="12dp"
             app:cardElevation="4dp">
 
@@ -242,34 +267,41 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Recent Transactions"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary_text"
-                    android:layout_marginBottom="16dp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Transaction Categories"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary_text"/>
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/scroll"
+                        app:tint="@color/primary_purple"/>
+                </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvTransactions"
-                    android:layout_width="match_parent"
-                    android:layout_height="300dp"
-                    android:clipToPadding="false"
-                    android:paddingBottom="8dp"
-                    android:scrollbars="vertical"
-                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                    tools:listitem="@layout/transaction_item"/>
-
-                <TextView
+                    android:id="@+id/rvCategories"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="View All Transactions →"
-                    android:textSize="14sp"
-                    android:textColor="@color/primary_purple"
-                    android:textAlignment="textEnd"
-                    android:layout_marginTop="8dp"/>
+                    android:minHeight="300dp"
+                    android:clipToPadding="false"
+                    android:scrollbars="vertical"
+                    android:fadeScrollbars="false"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
     </LinearLayout>
 </ScrollView>

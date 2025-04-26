@@ -29,7 +29,7 @@ import java.util.*
 class MainActivity : AppCompatActivity() {
 
     // Views
-    private lateinit var rvTransactions: RecyclerView
+    private lateinit var rvCategories: RecyclerView
     private lateinit var summaryContainer: LinearLayout
     private lateinit var tvBudgetAmount: TextView
     private lateinit var progressBudget: ProgressBar
@@ -38,13 +38,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnBackup: MaterialCardView
     private lateinit var btnAddTransaction: MaterialCardView
     private lateinit var btnSetBudget: MaterialButton
+    private lateinit var tvViewFullReport: TextView
 
     // Data
     private val transactions = mutableListOf<Transaction>()
     private var monthlyBudget: Double = 0.0
     private var currency: String = "$"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private lateinit var transactionAdapter: TransactionAdapter
+    private lateinit var categoryAdapter: CategoryAdapter
 
     // Preferences
     private lateinit var prefs: SharedPreferences
@@ -58,22 +59,37 @@ class MainActivity : AppCompatActivity() {
     private val BUDGET_NOTIFICATION_ID = 1
     private val REMINDER_NOTIFICATION_ID = 2
 
+    // Add these constants at the top of the class with other constants
+    private val DAILY_REMINDER_CHANNEL_ID = "daily_transaction_reminder"
+    private val DAILY_REMINDER_NOTIFICATION_ID = 3
+    private val LAST_TRANSACTION_CHECK_KEY = "last_transaction_check"
+    private val REMINDER_ENABLED_KEY = "reminder_enabled"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        initViews()
+        // Initialize SharedPreferences first
         prefs = getSharedPreferences("finance_prefs", MODE_PRIVATE)
+        
+        // Then initialize views and other components
+        initViews()
         setupRecyclerView()
         loadData()
         createNotificationChannels()
         setClickListeners()
         checkBudgetAlerts()
-        scheduleDailyReminder()
+        checkDailyTransactions()
+        
+        // Only schedule reminders if enabled
+        if (prefs.getBoolean(REMINDER_ENABLED_KEY, false)) {
+            scheduleDailyReminder()
+            scheduleDailyTransactionCheck()
+        }
     }
 
     private fun initViews() {
-        rvTransactions = findViewById(R.id.rvTransactions)
+        rvCategories = findViewById(R.id.rvCategories)
         summaryContainer = findViewById(R.id.summaryContainer)
         tvBudgetAmount = findViewById(R.id.tvBudgetAmount)
         progressBudget = findViewById(R.id.progressBudget)
@@ -82,6 +98,21 @@ class MainActivity : AppCompatActivity() {
         btnBackup = findViewById(R.id.btnBackup)
         btnAddTransaction = findViewById(R.id.btnAddTransaction)
         btnSetBudget = findViewById(R.id.btnSetBudget)
+        tvViewFullReport = findViewById(R.id.tvViewFullReport)
+
+        // Set up reminder button
+        val btnReminder = findViewById<ImageView>(R.id.btnReminder)
+        val isReminderEnabled = prefs.getBoolean(REMINDER_ENABLED_KEY, false)
+        btnReminder.setColorFilter(
+            if (isReminderEnabled) 
+                ContextCompat.getColor(this, R.color.primary_purple)
+            else 
+                ContextCompat.getColor(this, R.color.secondary_text)
+        )
+        
+        btnReminder.setOnClickListener {
+            showReminderDialog()
+        }
     }
 
     private fun loadData() {
@@ -120,37 +151,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() {
-        transactionAdapter = TransactionAdapter(transactions,
-            onItemClick = { showTransactionOptions(it) },
-            onItemLongClick = { showTransactionOptions(it) }
+        categoryAdapter = CategoryAdapter(
+            categories = emptyList(),
+            onCategoryClick = { category ->
+                val intent = Intent(this, CategoryTransactionsActivity::class.java).apply {
+                    putExtra("category_name", category.name)
+                }
+                startActivity(intent)
+            }
         )
 
-        transactionAdapter.currency = currency
-        rvTransactions.apply {
-            adapter = transactionAdapter
+        rvCategories.apply {
+            adapter = categoryAdapter
             layoutManager = LinearLayoutManager(this@MainActivity)
-            addItemDecoration(
-                DividerItemDecoration(
-                    this@MainActivity,
-                    LinearLayoutManager.VERTICAL
-                )
-            )
         }
-
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
-        ) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ) = false
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                deleteTransaction(transactions[viewHolder.adapterPosition])
-            }
-        }).attachToRecyclerView(rvTransactions)
     }
 
     private fun setClickListeners() {
@@ -166,11 +180,14 @@ class MainActivity : AppCompatActivity() {
             showBackupRestoreDialog()
         }
 
+        tvViewFullReport.setOnClickListener {
+            val intent = Intent(this, FullReportActivity::class.java)
+            startActivity(intent)
+        }
+
         currencySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 currency = parent?.getItemAtPosition(position).toString().substringBefore(" ")
-                transactionAdapter.currency = currency
-                transactionAdapter.notifyDataSetChanged()
                 saveData()
                 updateAllViews()
             }
@@ -182,6 +199,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateAllViews() {
         updateCategorySummary()
         updateBudgetViews()
+        updateCategories()
         checkBudgetAlerts()
     }
 
@@ -242,6 +260,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateCategories() {
+        // Get all predefined categories
+        val allCategories = resources.getStringArray(R.array.categories).toList()
+        
+        // Group transactions by category
+        val categoryMap = mutableMapOf<String, MutableList<Transaction>>()
+        transactions.forEach { transaction ->
+            categoryMap.getOrPut(transaction.category) { mutableListOf() }.add(transaction)
+        }
+
+        // Create category info list for all categories
+        val categories = allCategories.map { category ->
+            val categoryTransactions = categoryMap[category] ?: emptyList()
+            CategoryInfo(
+                name = category,
+                transactionCount = categoryTransactions.size,
+                totalAmount = categoryTransactions.sumOf { it.amount },
+                iconResId = getCategoryIcon(category)
+            )
+        }.sortedByDescending { it.totalAmount }
+
+        // Update RecyclerView
+        categoryAdapter = CategoryAdapter(
+            categories = categories,
+            onCategoryClick = { category ->
+                val intent = Intent(this, CategoryTransactionsActivity::class.java).apply {
+                    putExtra("category_name", category.name)
+                }
+                startActivity(intent)
+            }
+        )
+        rvCategories.adapter = categoryAdapter
+    }
+
+    private fun getCategoryIcon(category: String): Int {
+        return when (category.lowercase()) {
+            "food" -> R.drawable.cutlery
+            "transport" -> R.drawable.transportation
+            "shopping" -> R.drawable.shopping
+            "entertainment" -> R.drawable.cinema
+            "bills" -> R.drawable.payment
+            "health" -> R.drawable.health
+            "education" -> R.drawable.education
+            "income" -> R.drawable.income
+            else -> R.drawable.other
+        }
+    }
+
     private fun checkBudgetAlerts() {
         if (monthlyBudget == 0.0) return
 
@@ -296,7 +362,7 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         )
-        transactionAdapter.notifyDataSetChanged()
+        categoryAdapter.notifyDataSetChanged()
     }
 
     private fun showAddTransactionDialog() {
@@ -338,10 +404,10 @@ class MainActivity : AppCompatActivity() {
                             date = dateFormat.format(selectedDate),
                             type = type
                         ))
-                        transactionAdapter.notifyItemInserted(0)
+                        categoryAdapter.notifyItemInserted(0)
                         saveData()
                         updateAllViews()
-                        rvTransactions.scrollToPosition(0)
+                        rvCategories.scrollToPosition(0)
                     } else {
                         Toast.makeText(this@MainActivity, "Please enter valid details", Toast.LENGTH_SHORT).show()
                     }
@@ -367,7 +433,7 @@ class MainActivity : AppCompatActivity() {
         val position = transactions.indexOfFirst { it.id == transaction.id }
         if (position != -1) {
             transactions.removeAt(position)
-            transactionAdapter.notifyItemRemoved(position)
+            categoryAdapter.notifyItemRemoved(position)
             saveData()
             updateAllViews()
             Toast.makeText(this, "Transaction deleted", Toast.LENGTH_SHORT).show()
@@ -427,7 +493,7 @@ class MainActivity : AppCompatActivity() {
                         val position = transactions.indexOfFirst { it.id == transaction.id }
                         if (position != -1) {
                             transactions[position] = updatedTransaction
-                            transactionAdapter.notifyItemChanged(position)
+                            categoryAdapter.notifyItemChanged(position)
                             saveData()
                             updateAllViews()
                         }
@@ -521,7 +587,7 @@ class MainActivity : AppCompatActivity() {
                         transactions.clear()
                         transactions.addAll(Gson().fromJson(json, type))
                         saveData()
-                        transactionAdapter.notifyDataSetChanged()
+                        categoryAdapter.notifyDataSetChanged()
                         updateAllViews()
                         Toast.makeText(this, "Data restored successfully", Toast.LENGTH_SHORT).show()
                     }
@@ -620,5 +686,160 @@ class MainActivity : AppCompatActivity() {
             calendar.get(Calendar.MONTH),
             calendar.get(Calendar.DAY_OF_MONTH)
         ).show()
+    }
+
+    // Add this method to check for today's transactions
+    private fun checkDailyTransactions() {
+        val today = dateFormat.format(Date())
+        val hasTransactionToday = transactions.any { it.date == today }
+        
+        if (!hasTransactionToday) {
+            // Check if we already reminded today
+            val lastCheck = prefs.getString(LAST_TRANSACTION_CHECK_KEY, "") ?: ""
+            if (lastCheck != today) {
+                showDailyTransactionReminder()
+                // Save that we reminded today
+                prefs.edit().putString(LAST_TRANSACTION_CHECK_KEY, today).apply()
+            }
+        }
+    }
+
+    private fun showDailyTransactionReminder() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                DAILY_REMINDER_CHANNEL_ID,
+                "Daily Transaction Reminders",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Reminds you to add transactions daily"
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, DAILY_REMINDER_CHANNEL_ID)
+            .setSmallIcon(R.drawable.cutlery)
+            .setContentTitle("Daily Transaction Reminder")
+            .setContentText("Don't forget to add today's transactions!")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    Intent(this, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            )
+            .build()
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                100
+            )
+            return
+        }
+        NotificationManagerCompat.from(this).notify(DAILY_REMINDER_NOTIFICATION_ID, notification)
+    }
+
+    // Add this method to schedule periodic checks
+    private fun scheduleDailyTransactionCheck() {
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        val intent = Intent(this, ReminderReceiver::class.java).apply {
+            action = "CHECK_DAILY_TRANSACTIONS"
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            this,
+            1,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Set alarm for 8 PM every day
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = System.currentTimeMillis()
+            set(Calendar.HOUR_OF_DAY, 20)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+
+            if (timeInMillis < System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        alarmManager.setInexactRepeating(
+            AlarmManager.RTC_WAKEUP,
+            calendar.timeInMillis,
+            AlarmManager.INTERVAL_DAY,
+            pendingIntent
+        )
+    }
+
+    private fun showReminderDialog() {
+        val isReminderEnabled = prefs.getBoolean(REMINDER_ENABLED_KEY, false)
+        
+        AlertDialog.Builder(this)
+            .setTitle("Daily Transaction Reminder")
+            .setMessage(if (isReminderEnabled) 
+                "Do you want to disable daily transaction reminders?" 
+                else 
+                "Do you want to enable daily transaction reminders?")
+            .setPositiveButton(if (isReminderEnabled) "Disable" else "Enable") { _, _ ->
+                val btnReminder = findViewById<ImageView>(R.id.btnReminder)
+                if (isReminderEnabled) {
+                    // Disable reminder
+                    prefs.edit().putBoolean(REMINDER_ENABLED_KEY, false).apply()
+                    btnReminder.setColorFilter(
+                        ContextCompat.getColor(this, R.color.secondary_text)
+                    )
+                    // Cancel existing alarms
+                    cancelDailyReminders()
+                    Toast.makeText(this, "Daily reminders disabled", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Enable reminder
+                    prefs.edit().putBoolean(REMINDER_ENABLED_KEY, true).apply()
+                    btnReminder.setColorFilter(
+                        ContextCompat.getColor(this, R.color.primary_purple)
+                    )
+                    // Schedule reminders
+                    scheduleDailyReminder()
+                    scheduleDailyTransactionCheck()
+                    Toast.makeText(this, "Daily reminders enabled", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun cancelDailyReminders() {
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        
+        // Cancel transaction check alarm
+        val checkIntent = Intent(this, ReminderReceiver::class.java).apply {
+            action = "CHECK_DAILY_TRANSACTIONS"
+        }
+        val checkPendingIntent = PendingIntent.getBroadcast(
+            this,
+            1,
+            checkIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(checkPendingIntent)
+
+        // Cancel default reminder alarm
+        val reminderIntent = Intent(this, ReminderReceiver::class.java)
+        val reminderPendingIntent = PendingIntent.getBroadcast(
+            this,
+            0,
+            reminderIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(reminderPendingIntent)
     }
 }
