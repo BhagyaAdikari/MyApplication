@@ -20,11 +20,17 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.*
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.myapplication.database.DatabaseHelper
+import android.content.ContentValues
+import android.content.BroadcastReceiver
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.appcompat.app.AppCompatDelegate
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,6 +45,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnAddTransaction: MaterialCardView
     private lateinit var btnSetBudget: MaterialButton
     private lateinit var tvViewFullReport: TextView
+    private lateinit var tvMonthYear: TextView
+    private lateinit var tvMonthlyIncome: TextView
+    private lateinit var tvMonthlyExpense: TextView
+    private lateinit var tvMonthlyBalance: TextView
+    private lateinit var btnSelectMonth: ImageView
+    private lateinit var bottomNavigation: BottomNavigationView
 
     // Data
     private val transactions = mutableListOf<Transaction>()
@@ -46,6 +58,7 @@ class MainActivity : AppCompatActivity() {
     private var currency: String = "$"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private lateinit var categoryAdapter: CategoryAdapter
+    private lateinit var dbHelper: DatabaseHelper
 
     // Preferences
     private lateinit var prefs: SharedPreferences
@@ -65,12 +78,48 @@ class MainActivity : AppCompatActivity() {
     private val LAST_TRANSACTION_CHECK_KEY = "last_transaction_check"
     private val REMINDER_ENABLED_KEY = "reminder_enabled"
 
+    companion object {
+        private const val THEME_PREF_KEY = "theme_preference"
+        private const val THEME_SYSTEM = 0
+        private const val THEME_LIGHT = 1
+        private const val THEME_DARK = 2
+    }
+
+    private val transactionUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "TRANSACTION_UPDATED" -> {
+                    loadData()
+                    updateAllViews()
+                }
+                "TRANSACTION_DELETED" -> {
+                    loadData()
+                    updateAllViews()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // Initialize SharedPreferences first
         prefs = getSharedPreferences("finance_prefs", MODE_PRIVATE)
+        
+        // Apply theme after prefs is initialized
+        applyTheme()
+        
+        // Initialize bottom navigation
+        bottomNavigation = findViewById(R.id.bottom_navigation)
+        setupBottomNavigation()
+
+        // Register broadcast receiver using LocalBroadcastManager
+        val filter = IntentFilter().apply {
+            addAction("TRANSACTION_UPDATED")
+            addAction("TRANSACTION_DELETED")
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(transactionUpdateReceiver, filter)
         
         // Then initialize views and other components
         initViews()
@@ -86,6 +135,23 @@ class MainActivity : AppCompatActivity() {
             scheduleDailyReminder()
             scheduleDailyTransactionCheck()
         }
+
+        // Set up database helper
+        dbHelper = DatabaseHelper(this)
+
+        // Set up month selection
+        btnSelectMonth.setOnClickListener {
+            showMonthPicker()
+        }
+
+        // Load current month's data
+        val calendar = Calendar.getInstance()
+        loadMonthlyData(calendar.get(Calendar.MONTH), calendar.get(Calendar.YEAR))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(transactionUpdateReceiver)
     }
 
     private fun initViews() {
@@ -99,6 +165,11 @@ class MainActivity : AppCompatActivity() {
         btnAddTransaction = findViewById(R.id.btnAddTransaction)
         btnSetBudget = findViewById(R.id.btnSetBudget)
         tvViewFullReport = findViewById(R.id.tvViewFullReport)
+        tvMonthYear = findViewById(R.id.tvMonthYear)
+        tvMonthlyIncome = findViewById(R.id.tvMonthlyIncome)
+        tvMonthlyExpense = findViewById(R.id.tvMonthlyExpense)
+        tvMonthlyBalance = findViewById(R.id.tvMonthlyBalance)
+        btnSelectMonth = findViewById(R.id.btnSelectMonth)
 
         // Set up reminder button
         val btnReminder = findViewById<ImageView>(R.id.btnReminder)
@@ -147,6 +218,22 @@ class MainActivity : AppCompatActivity() {
             putFloat(BUDGET_KEY, monthlyBudget.toFloat())
             putString(CURRENCY_KEY, currency)
             apply()
+        }
+
+        // Save transactions to database
+        dbHelper.writableDatabase.use { db ->
+            db.delete("transactions", null, null) // Clear existing transactions
+            transactions.forEach { transaction ->
+                val values = ContentValues().apply {
+                    put("title", transaction.title)
+                    put("amount", transaction.amount)
+                    put("type", transaction.type)
+                    put("category", transaction.category)
+                    put("date", transaction.date)
+                    put("description", "")
+                }
+                db.insert("transactions", null, values)
+            }
         }
     }
 
@@ -197,31 +284,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateAllViews() {
-        updateCategorySummary()
+        // Update monthly summary
+        val calendar = Calendar.getInstance()
+        loadMonthlyData(calendar.get(Calendar.MONTH), calendar.get(Calendar.YEAR))
+        
+        // Update budget views
         updateBudgetViews()
+        
+        // Update category summary
+        updateCategorySummary()
+        
+        // Update categories list
         updateCategories()
+        
+        // Check budget alerts
         checkBudgetAlerts()
-    }
-
-    private fun updateCategorySummary() {
-        summaryContainer.removeAllViews()
-
-        val categoryMap = mutableMapOf<String, Double>()
-        transactions.filter { it.type == "Expense" }
-            .forEach {
-                categoryMap[it.category] = (categoryMap[it.category] ?: 0.0) + it.amount
-            }
-
-        categoryMap.forEach { (category, total) ->
-            val summaryView = LayoutInflater.from(this)
-                .inflate(R.layout.item_category_summary, summaryContainer, false)
-
-            summaryView.findViewById<TextView>(R.id.tvCategory).text = category
-            summaryView.findViewById<TextView>(R.id.tvAmount).text =
-                "$currency${"%.2f".format(total)}"
-
-            summaryContainer.addView(summaryView)
-        }
     }
 
     private fun updateBudgetViews() {
@@ -257,6 +334,27 @@ class MainActivity : AppCompatActivity() {
             progressBudget.progress = 0
             tvBudgetStatus.text = "No budget set"
             tvBudgetStatus.setTextColor(Color.GRAY)
+        }
+    }
+
+    private fun updateCategorySummary() {
+        summaryContainer.removeAllViews()
+
+        val categoryMap = mutableMapOf<String, Double>()
+        transactions.filter { it.type == "Expense" }
+            .forEach {
+                categoryMap[it.category] = (categoryMap[it.category] ?: 0.0) + it.amount
+            }
+
+        categoryMap.forEach { (category, total) ->
+            val summaryView = LayoutInflater.from(this)
+                .inflate(R.layout.item_category_summary, summaryContainer, false)
+
+            summaryView.findViewById<TextView>(R.id.tvCategory).text = category
+            summaryView.findViewById<TextView>(R.id.tvAmount).text =
+                "$currency${"%.2f".format(total)}"
+
+            summaryContainer.addView(summaryView)
         }
     }
 
@@ -841,5 +939,139 @@ class MainActivity : AppCompatActivity() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         alarmManager.cancel(reminderPendingIntent)
+    }
+
+    private fun showMonthPicker() {
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+
+        DatePickerDialog(
+            this,
+            { _, selectedYear, selectedMonth, _ ->
+                loadMonthlyData(selectedMonth, selectedYear)
+            },
+            year,
+            month,
+            1
+        ).show()
+    }
+
+    private fun loadMonthlyData(month: Int, year: Int) {
+        // Get all transactions from shared preferences
+        val transactionsJson = prefs.getString(TRANSACTIONS_KEY, "[]")
+        val type = object : TypeToken<List<Transaction>>() {}.type
+        val allTransactions: List<Transaction> = Gson().fromJson(transactionsJson, type)
+        
+        // Filter transactions for the selected month and year
+        val monthlyTransactions = allTransactions.filter { transaction ->
+            val cal = Calendar.getInstance()
+            cal.time = dateFormat.parse(transaction.date) ?: Date()
+            cal.get(Calendar.MONTH) == month && cal.get(Calendar.YEAR) == year
+        }
+
+        // Calculate totals
+        val totalIncome = monthlyTransactions.filter { it.type == "Income" }.sumOf { it.amount }
+        val totalExpense = monthlyTransactions.filter { it.type == "Expense" }.sumOf { it.amount }
+        val balance = totalIncome - totalExpense
+
+        // Update UI
+        val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+        val cal = Calendar.getInstance()
+        cal.set(year, month, 1)
+        tvMonthYear.text = monthYearFormat.format(cal.time)
+        
+        tvMonthlyIncome.text = String.format("Total Income: $currency%.2f", totalIncome)
+        tvMonthlyExpense.text = String.format("Total Expense: $currency%.2f", totalExpense)
+        tvMonthlyBalance.text = String.format("Balance: $currency%.2f", balance)
+
+        // Make the monthly summary card clickable to view detailed transactions
+        findViewById<MaterialCardView>(R.id.summaryCard).setOnClickListener {
+            val intent = Intent(this, MonthlyTransactionsActivity::class.java).apply {
+                putExtra("month", month)
+                putExtra("year", year)
+            }
+            startActivity(intent)
+        }
+    }
+
+    private fun setupBottomNavigation() {
+        bottomNavigation.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navigation_home -> {
+                    // Already on home, do nothing
+                    true
+                }
+                R.id.navigation_transactions -> {
+                    showAddTransactionDialog()
+                    true
+                }
+                R.id.navigation_reports -> {
+                    showBackupRestoreDialog()
+                    true
+                }
+                R.id.navigation_settings -> {
+                    showSettingsDialog()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // Set the default selected item
+        bottomNavigation.selectedItemId = R.id.navigation_home
+    }
+
+    private fun showSettingsDialog() {
+        val options = arrayOf("Theme Settings", "Reminder Settings")
+        AlertDialog.Builder(this)
+            .setTitle("Settings")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showThemeSelectionDialog()
+                    1 -> showReminderDialog()
+                }
+            }
+            .show()
+    }
+
+    private fun applyTheme() {
+        val themePreference = prefs.getInt(THEME_PREF_KEY, THEME_SYSTEM)
+        when (themePreference) {
+            THEME_SYSTEM -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+            THEME_LIGHT -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+            THEME_DARK -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+        }
+    }
+
+    private fun showThemeSelectionDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_theme_selection, null)
+        val themeRadioGroup = dialogView.findViewById<RadioGroup>(R.id.themeRadioGroup)
+        val currentTheme = prefs.getInt(THEME_PREF_KEY, THEME_SYSTEM)
+
+        when (currentTheme) {
+            THEME_SYSTEM -> themeRadioGroup.check(R.id.radioSystem)
+            THEME_LIGHT -> themeRadioGroup.check(R.id.radioLight)
+            THEME_DARK -> themeRadioGroup.check(R.id.radioDark)
+        }
+
+        AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("Apply") { _, _ ->
+                val selectedTheme = when (themeRadioGroup.checkedRadioButtonId) {
+                    R.id.radioSystem -> THEME_SYSTEM
+                    R.id.radioLight -> THEME_LIGHT
+                    R.id.radioDark -> THEME_DARK
+                    else -> THEME_SYSTEM
+                }
+
+                if (selectedTheme != currentTheme) {
+                    prefs.edit().putInt(THEME_PREF_KEY, selectedTheme).apply()
+                    applyTheme()
+                    recreate()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 }

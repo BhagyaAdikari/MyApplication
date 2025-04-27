@@ -38,4 +38,4 @@
         <item name="android:progressTint">@color/progress_primary</item>
         <item name="android:progressBackgroundTint">@color/progress_background</item>
     </style>
-</resources>
+</resources> 

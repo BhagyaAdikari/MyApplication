@@ -97,5 +97,9 @@
     <color name="onboarding_text_primary">#3A3A4A</color>
     <color name="onboarding_text_secondary">#6D6D7A</color>
 
+    <color name="income_green">#4CAF50</color>
+    <color name="expense_red">#F44336</color>
+
+    <color name="ic_launcher_background">#FFFFFF</color>
 
 </resources>

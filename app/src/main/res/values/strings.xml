@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
 
@@ -38,5 +39,18 @@
     <string name="tagline">Smarter Money Moves</string>
     <string name="app_logo">WealthWise Logo</string>
     <string name="next">Next</string>
+    <string name="get_started">Get Started</string>
+
+    <!-- Onboarding Screen 1 -->
+    <string name="onboarding1_title">Set Smart Budgets</string>
+    <string name="onboarding1_description">Create budgets that match your goals and stick to them effortlessly.</string>
+
+    <!-- Onboarding Screen 2 -->
+    <string name="onboarding2_title">Track Your Expenses</string>
+    <string name="onboarding2_description">Monitor your spending habits and make informed financial decisions.</string>
+
+    <!-- Onboarding Screen 3 -->
+    <string name="onboarding3_title">Visualize Your Progress</string>
+    <string name="onboarding3_description">See your financial journey with beautiful charts and insights.</string>
 
 </resources>

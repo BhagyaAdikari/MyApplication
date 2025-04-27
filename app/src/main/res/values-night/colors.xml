@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Purple Theme -->
+    <color name="primary_purple">#BB86FC</color>
+    <color name="primary_purple_light">#D8C8F0</color>
+    <color name="primary_purple_dark">#3700B3</color>
+
+    <!-- Background Colors -->
+    <color name="background_light">#121212</color>
+    <color name="background_card">#1E1E1E</color>
+    <color name="background_input">#2D2D2D</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+    <color name="text_hint">#80FFFFFF</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_on_accent">#000000</color>
+
+    <!-- Accent Colors -->
+    <color name="accent_green">#4CAF50</color>
+    <color name="accent_red">#F44336</color>
+    <color name="accent_yellow">#FFC107</color>
+    <color name="accent_blue">#2196F3</color>
+
+    <!-- Component Colors -->
+    <color name="button_primary">@color/primary_purple</color>
+    <color name="button_secondary">#2D2D2D</color>
+    <color name="button_disabled">#424242</color>
+
+    <color name="border_light">#424242</color>
+    <color name="divider">#2D2D2D</color>
+
+    <!-- State Colors -->
+    <color name="button_pressed">@color/primary_purple_dark</color>
+    <color name="button_focused">@color/primary_purple_light</color>
+    <color name="state_error">#CF6679</color>
+
+    <!-- Chart Colors -->
+    <color name="chart_1">#BB86FC</color>
+    <color name="chart_2">#D8C8F0</color>
+    <color name="chart_3">#E1D5F5</color>
+    <color name="chart_4">#F0E9FF</color>
+    <color name="chart_5">#FFFFFF</color>
+
+    <!-- Specific Component Colors -->
+    <color name="progress_background">#424242</color>
+    <color name="progress_primary">@color/primary_purple</color>
+    <color name="spinner_background">@color/background_input</color>
+    <color name="spinner_text">@color/text_primary</color>
+
+    <color name="onboarding_text_primary">#FFFFFF</color>
+    <color name="onboarding_text_secondary">#B3FFFFFF</color>
+
+    <color name="income_green">#4CAF50</color>
+    <color name="expense_red">#F44336</color>
+
+    <color name="ic_launcher_background">#121212</color>
+</resources> 

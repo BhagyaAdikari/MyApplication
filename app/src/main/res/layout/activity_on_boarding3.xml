@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/onboarding_gradient_bg"
     android:padding="24dp"
-    tools:context=".OnBoardingActivity2">
+    tools:context=".OnBoardingActivity3">
 
     <!-- Animated Illustration -->
     <com.airbnb.lottie.LottieAnimationView
@@ -29,7 +29,7 @@
         android:id="@+id/onboard_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Set Smart Budgets"
+        android:text="@string/onboarding3_title"
         android:textColor="@color/onboarding_text_primary"
         android:textSize="28sp"
         android:textStyle="bold"
@@ -46,7 +46,7 @@
         android:id="@+id/onboard_description"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Create budgets that match your goals and stick to them effortlessly."
+        android:text="@string/onboarding3_description"
         android:textColor="@color/onboarding_text_secondary"
         android:textSize="18sp"
         android:fontFamily="@font/poppins_medium"
@@ -92,7 +92,7 @@
         android:id="@+id/btn_get_started"
         android:layout_width="0dp"
         android:layout_height="56dp"
-        android:text="Get Started"
+        android:text="@string/get_started"
         android:textColor="@color/white"
         android:textSize="18sp"
         android:textStyle="bold"

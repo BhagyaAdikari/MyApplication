@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:clickable="true"
+    android:focusable="true">
+
+    <ImageView
+        android:id="@+id/categoryBackground"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/category_background_selector"
+        android:contentDescription="@null" />
+
+    <ImageView
+        android:id="@+id/categoryIcon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_category"
+        android:contentDescription="Category icon" />
+
+</FrameLayout> 
